@@ -84,14 +84,7 @@ function App() {
           </div>
           <span className="text-xl font-bold text-slate-900">Bank 2 Excel</span>
         </div>
-        <div className="hidden md:flex items-center gap-8">
-          <a href="#features" className="nav-link">Features</a>
-          <a href="#pricing" className="nav-link">Pricing</a>
-          <a href="#security" className="nav-link">Security</a>
-        </div>
-        <button className="px-6 py-2 rounded-full border border-slate-200 hover:border-slate-400 font-medium transition-colors">
-          Sign In
-        </button>
+
       </nav>
 
       {/* Hero Section */}
@@ -118,13 +111,7 @@ function App() {
                 </div>
                 <p className="text-sm text-slate-500">Convert vast PDF statements with high accuracy.</p>
               </div>
-              <div>
-                <div className="flex items-center gap-2 mb-2">
-                  <Shield className="w-5 h-5 text-brand-600" />
-                  <h3 className="font-semibold">Bank-Grade Security</h3>
-                </div>
-                <p className="text-sm text-slate-500">Provides secure root and collected data.</p>
-              </div>
+
               <div>
                 <div className="flex items-center gap-2 mb-2">
                   <CheckCircle className="w-5 h-5 text-brand-600" />
