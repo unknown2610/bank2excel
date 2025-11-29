@@ -1,33 +1,43 @@
 import React from 'react';
+import { Loader2, CheckCircle, XCircle, FileSpreadsheet } from 'lucide-react';
 
 const StatusDisplay = ({ status, progress, message, onDownload }) => {
     return (
-        <div className="glass-panel p-8 mt-8 w-full max-w-2xl mx-auto">
-            <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg font-semibold capitalize">{status === 'processing' ? 'Converting...' : status}</h3>
-                <span className="text-blue-400 font-mono">{progress}%</span>
+        <div className="w-full max-w-md mx-auto text-center">
+            <div className="mb-6 flex justify-center">
+                {status === 'processing' && <Loader2 className="w-16 h-16 text-brand-500 animate-spin" />}
+                {status === 'completed' && <CheckCircle className="w-16 h-16 text-green-500" />}
+                {status === 'failed' && <XCircle className="w-16 h-16 text-red-500" />}
             </div>
 
-            <div className="w-full bg-slate-700 rounded-full h-2.5 mb-6 overflow-hidden">
-                <div
-                    className="bg-gradient-to-r from-blue-500 to-violet-600 h-2.5 rounded-full transition-all duration-500 ease-out"
-                    style={{ width: `${progress}%` }}
-                ></div>
-            </div>
+            <h3 className="text-2xl font-bold text-slate-900 mb-2 capitalize">
+                {status === 'processing' ? 'Processing...' : status}
+            </h3>
 
-            <p className="text-slate-300 text-center mb-6">{message}</p>
+            <p className="text-slate-500 mb-8">{message}</p>
+
+            {status === 'processing' && (
+                <div className="w-full bg-slate-100 rounded-full h-3 mb-2 overflow-hidden">
+                    <div
+                        className="bg-brand-500 h-3 rounded-full transition-all duration-500 ease-out"
+                        style={{ width: `${progress}%` }}
+                    ></div>
+                    <p className="text-right text-xs text-slate-400 mt-1">{progress}%</p>
+                </div>
+            )}
 
             {status === 'completed' && (
-                <div className="text-center">
-                    <button onClick={onDownload} className="btn-primary">
+                <div className="animate-fade-in">
+                    <button onClick={onDownload} className="btn-primary w-full flex items-center justify-center gap-2">
+                        <FileSpreadsheet className="w-5 h-5" />
                         Download Excel File
                     </button>
                 </div>
             )}
 
             {status === 'failed' && (
-                <div className="text-center text-red-400">
-                    <p>Conversion failed. Please try again.</p>
+                <div className="text-red-500 bg-red-50 p-4 rounded-xl border border-red-100">
+                    <p>Something went wrong. Please try again.</p>
                 </div>
             )}
         </div>

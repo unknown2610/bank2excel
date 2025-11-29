@@ -1,4 +1,5 @@
-import React, { useCallback, useState } from 'react';
+import React, { useState } from 'react';
+import { FileSpreadsheet, UploadCloud } from 'lucide-react';
 
 const FileUpload = ({ onUpload, disabled }) => {
     const [dragActive, setDragActive] = useState(false);
@@ -31,7 +32,9 @@ const FileUpload = ({ onUpload, disabled }) => {
 
     return (
         <div
-            className={`glass-panel p-10 text-center transition-all border-2 border-dashed ${dragActive ? 'border-blue-500 bg-slate-800' : 'border-slate-600'} ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:border-blue-400'}`}
+            className={`relative rounded-2xl p-10 text-center transition-all border-2 border-dashed 
+                ${dragActive ? 'border-brand-500 bg-brand-50' : 'border-slate-200 hover:border-brand-400'} 
+                ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
             onDragEnter={handleDrag}
             onDragLeave={handleDrag}
             onDragOver={handleDrag}
@@ -46,17 +49,34 @@ const FileUpload = ({ onUpload, disabled }) => {
                 disabled={disabled}
             />
             <label htmlFor="file-upload" className="cursor-pointer w-full h-full flex flex-col items-center justify-center">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16 text-blue-500 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                </svg>
-                <p className="text-xl font-semibold mb-2">Drag & Drop your Bank Statement</p>
-                <p className="text-slate-400 text-sm">Supports PDF (up to 2000 pages) and Images (JPEG/PNG)</p>
-                <button className="mt-6 btn-primary" disabled={disabled}>
-                    Browse Files
+                <div className="bg-brand-50 p-4 rounded-full mb-4">
+                    <FileSpreadsheet className="w-10 h-10 text-brand-600" />
+                </div>
+                <div className="bg-white px-4 py-2 rounded-lg shadow-sm border border-slate-100 flex items-center gap-3 mb-4">
+                    <div className="bg-red-100 p-1.5 rounded">
+                        <span className="text-xs font-bold text-red-600">PDF</span>
+                    </div>
+                    <ArrowRightIcon />
+                    <div className="bg-green-100 p-1.5 rounded">
+                        <span className="text-xs font-bold text-green-600">XLS</span>
+                    </div>
+                </div>
+
+                <p className="text-xl font-semibold text-slate-900 mb-2">Drag & drop your statement</p>
+                <p className="text-slate-500 text-sm mb-6">Supports PDF (up to 2000 pages) and Images</p>
+
+                <button className="btn-primary w-full" disabled={disabled}>
+                    Select File
                 </button>
             </label>
         </div>
     );
 };
+
+const ArrowRightIcon = () => (
+    <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
+    </svg>
+);
 
 export default FileUpload;
