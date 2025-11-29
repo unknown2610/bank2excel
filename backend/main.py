@@ -18,8 +18,11 @@ app.add_middleware(
 )
 
 # Directories
-UPLOAD_DIR = "uploads"
-OUTPUT_DIR = "outputs"
+# Use system temp directory (works on Windows and Cloud Run/Linux)
+import tempfile
+base_temp = tempfile.gettempdir()
+UPLOAD_DIR = os.path.join(base_temp, "uploads")
+OUTPUT_DIR = os.path.join(base_temp, "outputs")
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
