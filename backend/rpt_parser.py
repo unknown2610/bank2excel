@@ -123,8 +123,13 @@ def parse_rpt_file(file_path):
     if current_row:
         data.append(current_row)
         
-    df = pd.DataFrame(data)
+    # Explicitly define columns to avoid KeyError if data is empty
+    columns = ["Date", "Particulars", "Cheque No", "Withdrawals", "Deposits", "Balance"]
+    df = pd.DataFrame(data, columns=columns)
     
+    if df.empty:
+        return df
+
     # POST-PROCESSING: Convert types for Excel
     # We need to return the DF, but the formatting happens at save time.
     # However, we can convert columns to numeric here so pandas knows they are numbers.
@@ -141,8 +146,5 @@ def parse_rpt_file(file_path):
     df["Withdrawals"] = df["Withdrawals"].apply(clean_currency)
     df["Deposits"] = df["Deposits"].apply(clean_currency)
     df["Balance"] = df["Balance"].apply(clean_currency)
-    
-    # Date conversion (optional, but good for sorting/formatting)
-    # df["Date"] = pd.to_datetime(df["Date"], format="%d-%m-%Y", errors='coerce')
     
     return df
