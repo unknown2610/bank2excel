@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import FileUpload from './components/FileUpload';
 import StatusDisplay from './components/StatusDisplay';
 
-const API_URL = 'http://localhost:8000';
+const API_URL = 'https://bank2excel-backend-361068788298.us-central1.run.app';
 
 function App() {
   const [jobId, setJobId] = useState(null);
