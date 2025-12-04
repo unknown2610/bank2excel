@@ -12,87 +12,97 @@ def parse_rpt_file(file_path):
     header_line_idx = -1
     header_indices = {}
     
-    # Keywords to identify the header line
-    # Based on user image: DATE, PARTICULARS, CHQ.NO./REF.NO., WITHDRAWALS, DEPOSITS, BALANCE
-    keywords = ["DATE", "PARTICULARS", "CHQ.NO", "WITHDRAWALS", "DEPOSITS", "BALANCE"]
-    
     for i, line in enumerate(lines):
-        # Check if enough keywords are present to confirm it's the header
         if "DATE" in line and "PARTICULARS" in line and "BALANCE" in line:
             header_line_idx = i
             
-            # Find start positions of each column
-            # We add a small buffer or rely on the visual spacing. 
-            # Using .find() gives the start index.
-            p_date = line.find("DATE")
-            p_part = line.find("PARTICULARS")
+            # Use specific logic for Date and Particulars split
+            # Date is always DD-MM-YYYY (10 chars). We'll assume a safe gap.
+            # But for the rest, we use the header positions.
+            
             p_chq = line.find("CHQ.NO") 
-            if p_chq == -1: p_chq = line.find("REF.NO") # Fallback
+            if p_chq == -1: p_chq = line.find("REF.NO")
             
             p_with = line.find("WITHDRAWALS")
             p_dep = line.find("DEPOSITS")
             p_bal = line.find("BALANCE")
             
-            # Handle missing columns if any (though unlikely for this format)
-            # We assume the order: DATE | PARTICULARS | CHQ | WITH | DEP | BAL
-            
-            # Define slice ranges
-            # We'll use the start of the next column as the end of the current one
-            # For the last column, we go to the end of the line
-            
+            # Define slice ranges based on header
+            # We will handle Date/Particulars split dynamically in the loop
             header_indices = {
-                "date": (0, p_part), 
-                "particulars": (p_part, p_chq),
-                "cheque": (p_chq, p_with),
-                "withdrawals": (p_with, p_dep),
-                "deposits": (p_dep, p_bal),
-                "balance": (p_bal, None)
+                "cheque_start": p_chq,
+                "with_start": p_with,
+                "dep_start": p_dep,
+                "bal_start": p_bal
             }
             break
             
     if header_line_idx == -1:
-        # Fallback: If no header found, maybe try to guess or return empty
-        # For now, let's assume the format matches the user's request
-        print("Warning: Header not found. Attempting to parse with default offsets or failing.")
-        # We could try default offsets if we knew them, but for now let's error out or return empty
         return pd.DataFrame()
 
     data = []
     current_row = None
-    
-    # Regex for date validation (DD-MM-YYYY)
-    # The image shows 08-04-2024, so \d{2}-\d{2}-\d{4}
     date_pattern = re.compile(r'^\d{2}-\d{2}-\d{4}')
 
     for line in lines[header_line_idx+1:]:
-        stripped_line = line.strip()
-        if not stripped_line: continue
-        if stripped_line.startswith("-------"): continue # Separator lines
-        if "Page Total:" in line: continue # Footer
-        if "Opening Balance" in line: continue # Sometimes appears
+        if not line.strip(): continue
+        if line.strip().startswith("-------"): continue
+        if "Page Total:" in line: continue
         
-        # Helper to extract fixed-width field
-        def get_field(start, end):
-            if start == -1: return ""
-            # If end is None, go to end of string
-            val = line[start:end].strip() if end is not None else line[start:].strip()
-            return val
+        # 1. Extract Date (Fixed width 10 chars + buffer)
+        # We assume Date is at the very beginning of the line
+        possible_date = line[:10].strip()
+        is_new_row = date_pattern.match(possible_date)
+        
+        # 2. Extract other fixed columns based on header positions
+        # We need to be careful: The header positions are starting points.
+        # Particulars ends where Cheque starts.
+        
+        idx_chq = header_indices["cheque_start"]
+        idx_with = header_indices["with_start"]
+        idx_dep = header_indices["dep_start"]
+        idx_bal = header_indices["bal_start"]
+        
+        # Helper to safely slice
+        def get_slice(s, start, end):
+            if start >= len(s): return ""
+            return s[start:end].strip()
 
-        # Extract raw fields
-        date_val = get_field(*header_indices["date"])
-        part_val = get_field(*header_indices["particulars"])
-        chq_val = get_field(*header_indices["cheque"])
-        with_val = get_field(*header_indices["withdrawals"])
-        dep_val = get_field(*header_indices["deposits"])
-        bal_val = get_field(*header_indices["balance"])
+        # Date is first 10 chars. Particulars is from 10 to idx_chq.
+        # But we need to handle the case where Particulars bleeds left or right.
+        # The user said "08-04-2024 M" was in A. That means we took too much for A.
+        # We will strictly take 10 chars for date.
+        
+        date_val = line[:10].strip() if is_new_row else ""
+        
+        # Particulars: from index 11 (skip space) to Cheque Start
+        # We give a small buffer of 1-2 chars for the gap
+        part_val = get_slice(line, 11, idx_chq)
+        
+        chq_val = get_slice(line, idx_chq, idx_with)
+        with_val = get_slice(line, idx_with, idx_dep)
+        dep_val = get_slice(line, idx_dep, idx_bal)
+        bal_val = get_slice(line, idx_bal, None)
 
-        # Check if this line starts a new transaction
-        if date_pattern.match(date_val):
-            # Save the previous row if it exists
+        # CLEANING: Remove "INR" from Cheque No
+        if "INR" in chq_val:
+            chq_val = chq_val.replace("INR", "").strip()
+            # If it was ONLY an amount (like 269.00), it might be empty now or just a number
+            # The user said "no INR amount".
+            # If it looks like a float, and we have a value in Withdrawals/Deposits, it's likely redundant.
+            try:
+                float(chq_val)
+                # It is a number. Is it a cheque number or an amount?
+                # Cheque numbers are usually integers. Amounts have decimals.
+                if "." in chq_val:
+                    chq_val = "" # Assume it's a misplaced amount
+            except ValueError:
+                pass # It's alphanumeric, likely a real ref/cheque
+
+        if is_new_row:
             if current_row:
                 data.append(current_row)
             
-            # Initialize new row
             current_row = {
                 "Date": date_val,
                 "Particulars": part_val,
@@ -102,22 +112,37 @@ def parse_rpt_file(file_path):
                 "Balance": bal_val
             }
         else:
-            # It's a continuation line (or a line without a date)
+            # Continuation
             if current_row:
-                # Append Particulars text if present
-                if part_val:
-                    current_row["Particulars"] += " " + part_val
-                
-                # Update other fields if they were empty in the main row but present here
-                # Or if they are just split across lines (like the amounts in the example)
-                if chq_val: current_row["Cheque No"] = chq_val
+                if part_val: current_row["Particulars"] += " " + part_val
+                if chq_val: current_row["Cheque No"] = chq_val # Overwrite or append? Usually overwrite if empty
                 if with_val: current_row["Withdrawals"] = with_val
                 if dep_val: current_row["Deposits"] = dep_val
                 if bal_val: current_row["Balance"] = bal_val
 
-    # Don't forget the last row
     if current_row:
         data.append(current_row)
         
     df = pd.DataFrame(data)
+    
+    # POST-PROCESSING: Convert types for Excel
+    # We need to return the DF, but the formatting happens at save time.
+    # However, we can convert columns to numeric here so pandas knows they are numbers.
+    
+    def clean_currency(x):
+        if not x: return None
+        # Remove 'Cr', 'Dr', 'INR', commas
+        x = str(x).upper().replace("CR", "").replace("DR", "").replace("INR", "").replace(",", "").strip()
+        try:
+            return float(x)
+        except ValueError:
+            return None
+
+    df["Withdrawals"] = df["Withdrawals"].apply(clean_currency)
+    df["Deposits"] = df["Deposits"].apply(clean_currency)
+    df["Balance"] = df["Balance"].apply(clean_currency)
+    
+    # Date conversion (optional, but good for sorting/formatting)
+    # df["Date"] = pd.to_datetime(df["Date"], format="%d-%m-%Y", errors='coerce')
+    
     return df
