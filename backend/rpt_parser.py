@@ -11,6 +11,7 @@ def parse_rpt_file(file_path):
 
     # Default indices based on the known format (fallback)
     header_indices = {
+        "date_start": 0,
         "cheque_start": 50, 
         "with_start": 70,
         "dep_start": 90,
@@ -27,6 +28,9 @@ def parse_rpt_file(file_path):
             header_found = True
             
             # Dynamic positions
+            p_date = line_upper.find("DATE")
+            if p_date == -1: p_date = 0
+            
             p_chq = line_upper.find("CHQ.NO") 
             if p_chq == -1: p_chq = line_upper.find("REF.NO")
             if p_chq == -1: p_chq = 45 # Fallback
@@ -41,6 +45,7 @@ def parse_rpt_file(file_path):
             if p_bal == -1: p_bal = 105
             
             header_indices = {
+                "date_start": p_date,
                 "cheque_start": p_chq,
                 "with_start": p_with,
                 "dep_start": p_dep,
@@ -52,7 +57,7 @@ def parse_rpt_file(file_path):
     current_row = None
     
     # Regex for date validation (DD-MM-YYYY)
-    date_pattern = re.compile(r'^\d{2}-\d{2}-\d{4}')
+    date_pattern = re.compile(r'\d{2}-\d{2}-\d{4}')
 
     start_idx = header_line_idx + 1 if header_found else 0
 
@@ -61,12 +66,20 @@ def parse_rpt_file(file_path):
         if line.strip().startswith("-------"): continue
         if "Page Total:" in line: continue
         
-        # 1. Extract Date (Fixed width 10 chars)
-        # We assume Date is at the very beginning of the line
-        possible_date = line[:10].strip()
-        is_new_row = bool(date_pattern.match(possible_date))
+        # 1. Extract Date
+        # Use a wider window to find the date, handling potential margins
+        # We look at the first 25 chars.
+        date_window = line[:25]
+        date_match = date_pattern.search(date_window)
+        
+        is_new_row = bool(date_match)
+        date_val = date_match.group(0) if is_new_row else ""
         
         # 2. Extract columns
+        # We use the header indices, but we need to be careful about the Date/Particulars split.
+        # Particulars usually starts after Date.
+        
+        idx_date = header_indices["date_start"]
         idx_chq = header_indices["cheque_start"]
         idx_with = header_indices["with_start"]
         idx_dep = header_indices["dep_start"]
@@ -76,17 +89,11 @@ def parse_rpt_file(file_path):
             if start >= len(s): return ""
             return s[start:end].strip()
 
-        date_val = line[:10].strip() if is_new_row else ""
+        # Particulars starts after date (approx 10-12 chars after date start)
+        # Or we can use the header index of "PARTICULARS" if we had it.
+        # Let's assume it starts 12 chars after date_start to be safe.
+        part_start = idx_date + 11 
         
-        # Particulars: strictly start after the date column (index 10)
-        # We skip index 10 (usually a space) and start at 11.
-        # If the file is jammed, we might need to check line[10]
-        part_start = 11
-        if len(line) > 10 and line[10] != ' ':
-             # If no space, maybe it's jammed? But standard is 10 chars for date.
-             # We will stick to 11 to avoid taking the last char of date if date was somehow longer (unlikely)
-             pass
-
         part_val = get_slice(line, part_start, idx_chq)
         chq_val = get_slice(line, idx_chq, idx_with)
         with_val = get_slice(line, idx_with, idx_dep)
@@ -97,8 +104,6 @@ def parse_rpt_file(file_path):
         if "INR" in chq_val:
             chq_val = chq_val.replace("INR", "").strip()
         
-        # Remove standalone amounts from Cheque column
-        # If it looks like a float (has a dot), it's probably an amount
         try:
             if chq_val and "." in chq_val:
                 float(chq_val)
@@ -137,8 +142,6 @@ def parse_rpt_file(file_path):
         return df
 
     # POST-PROCESSING
-    
-    # 1. Convert Date to datetime objects for Excel formatting
     def parse_date(x):
         try:
             return pd.to_datetime(x, format="%d-%m-%Y").date()
@@ -147,7 +150,6 @@ def parse_rpt_file(file_path):
             
     df["Date"] = df["Date"].apply(parse_date)
 
-    # 2. Convert Numbers
     def clean_currency(x):
         if not x: return None
         x = str(x).upper().replace("CR", "").replace("DR", "").replace("INR", "").replace(",", "").strip()
