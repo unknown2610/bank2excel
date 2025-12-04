@@ -1,34 +1,59 @@
 import React from 'react';
 
-const StatusDisplay = ({ status, progress, message, onDownload }) => {
-    return (
-        <div className="glass-panel p-8 mt-8 w-full max-w-2xl mx-auto">
-            <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg font-semibold capitalize">{status === 'processing' ? 'Converting...' : status}</h3>
-                <span className="text-blue-400 font-mono">{progress}%</span>
-            </div>
+const StatusDisplay = ({ status, progress, message, onDownload, onReset }) => {
+    const isProcessing = status === 'processing';
+    const isCompleted = status === 'completed';
+    const isFailed = status === 'failed';
 
-            <div className="w-full bg-slate-700 rounded-full h-2.5 mb-6 overflow-hidden">
+    return (
+        <div className="w-full text-center">
+            <h2 className="text-2xl font-bold mb-6 text-slate-800">
+                {isProcessing && 'Converting...'}
+                {isCompleted && 'Success!'}
+                {isFailed && 'Failed'}
+            </h2>
+
+            {/* Progress Bar */}
+            <div className="w-full bg-slate-200 rounded-full h-3 mb-4 overflow-hidden">
                 <div
-                    className="bg-gradient-to-r from-blue-500 to-violet-600 h-2.5 rounded-full transition-all duration-500 ease-out"
+                    className={`h-3 rounded-full transition-all duration-500 ${isFailed ? 'bg-red-500' : 'bg-blue-600'
+                        }`}
                     style={{ width: `${progress}%` }}
                 ></div>
             </div>
 
-            <p className="text-slate-300 text-center mb-6">{message}</p>
+            <div className="flex justify-between text-xs text-slate-500 mb-8 font-medium">
+                <span>{progress}%</span>
+                <span>{isProcessing ? 'Processing...' : isCompleted ? 'Done' : 'Error'}</span>
+            </div>
 
-            {status === 'completed' && (
-                <div className="text-center">
-                    <button onClick={onDownload} className="btn-primary">
-                        Download Excel File
-                    </button>
+            <p className="text-slate-600 mb-8 min-h-[1.5rem] font-medium">{message}</p>
+
+            {isCompleted && (
+                <button
+                    onClick={onDownload}
+                    className="w-full btn-primary flex items-center justify-center gap-2 mb-4"
+                >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                    </svg>
+                    Download Excel
+                </button>
+            )}
+
+            {isFailed && (
+                <div className="text-red-500 text-sm mb-6 bg-red-50 p-3 rounded-lg border border-red-100">
+                    Conversion failed. Please try again.
                 </div>
             )}
 
-            {status === 'failed' && (
-                <div className="text-center text-red-400">
-                    <p>Conversion failed. Please try again.</p>
-                </div>
+            {!isProcessing && (
+                <button
+                    onClick={onReset}
+                    className="text-slate-500 hover:text-slate-800 underline text-sm font-medium transition-colors"
+                >
+                    Convert Another File
+                </button>
             )}
         </div>
     );
