@@ -1,5 +1,6 @@
 import re
 import pandas as pd
+from datetime import datetime
 
 def parse_rpt_file(file_path):
     """
@@ -9,10 +10,8 @@ def parse_rpt_file(file_path):
         lines = f.readlines()
 
     # Default indices based on the known format (fallback)
-    # Date: 0-10, Particulars: 11-?, etc.
-    # We will try to find the header, but if we fail, we use these defaults.
     header_indices = {
-        "cheque_start": 50, # Approximate
+        "cheque_start": 50, 
         "with_start": 70,
         "dep_start": 90,
         "bal_start": 110
@@ -52,8 +51,8 @@ def parse_rpt_file(file_path):
     data = []
     current_row = None
     
-    # Broader date match: DD-MM-YYYY, DD/MM/YYYY, YYYY-MM-DD
-    date_pattern = re.compile(r'^\d{2}[-/]\d{2}[-/]\d{4}|^\d{4}[-/]\d{2}[-/]\d{2}')
+    # Regex for date validation (DD-MM-YYYY)
+    date_pattern = re.compile(r'^\d{2}-\d{2}-\d{4}')
 
     start_idx = header_line_idx + 1 if header_found else 0
 
@@ -63,6 +62,7 @@ def parse_rpt_file(file_path):
         if "Page Total:" in line: continue
         
         # 1. Extract Date (Fixed width 10 chars)
+        # We assume Date is at the very beginning of the line
         possible_date = line[:10].strip()
         is_new_row = bool(date_pattern.match(possible_date))
         
@@ -77,7 +77,17 @@ def parse_rpt_file(file_path):
             return s[start:end].strip()
 
         date_val = line[:10].strip() if is_new_row else ""
-        part_val = get_slice(line, 11, idx_chq)
+        
+        # Particulars: strictly start after the date column (index 10)
+        # We skip index 10 (usually a space) and start at 11.
+        # If the file is jammed, we might need to check line[10]
+        part_start = 11
+        if len(line) > 10 and line[10] != ' ':
+             # If no space, maybe it's jammed? But standard is 10 chars for date.
+             # We will stick to 11 to avoid taking the last char of date if date was somehow longer (unlikely)
+             pass
+
+        part_val = get_slice(line, part_start, idx_chq)
         chq_val = get_slice(line, idx_chq, idx_with)
         with_val = get_slice(line, idx_with, idx_dep)
         dep_val = get_slice(line, idx_dep, idx_bal)
@@ -88,6 +98,7 @@ def parse_rpt_file(file_path):
             chq_val = chq_val.replace("INR", "").strip()
         
         # Remove standalone amounts from Cheque column
+        # If it looks like a float (has a dot), it's probably an amount
         try:
             if chq_val and "." in chq_val:
                 float(chq_val)
@@ -122,8 +133,21 @@ def parse_rpt_file(file_path):
     columns = ["Date", "Particulars", "Cheque No", "Withdrawals", "Deposits", "Balance"]
     df = pd.DataFrame(data, columns=columns)
     
-    # Even if empty, return the empty DF with columns
+    if df.empty:
+        return df
+
+    # POST-PROCESSING
     
+    # 1. Convert Date to datetime objects for Excel formatting
+    def parse_date(x):
+        try:
+            return pd.to_datetime(x, format="%d-%m-%Y").date()
+        except:
+            return x
+            
+    df["Date"] = df["Date"].apply(parse_date)
+
+    # 2. Convert Numbers
     def clean_currency(x):
         if not x: return None
         x = str(x).upper().replace("CR", "").replace("DR", "").replace("INR", "").replace(",", "").strip()
