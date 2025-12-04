@@ -51,8 +51,8 @@ def process_bank_statement(file_path, job_id, jobs, output_dir):
         elif ext == ".rpt":
             jobs[job_id]["message"] = "Parsing RPT file..."
             df = parse_rpt_file(file_path)
-            if not df.empty:
-                all_tables.append(df)
+            # Append even if empty, so we get headers in the excel file
+            all_tables.append(df)
             jobs[job_id]["progress"] = 90
 
         else:
