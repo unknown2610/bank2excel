@@ -11,7 +11,6 @@ def parse_rpt_file(file_path):
 
     # Default indices based on the known format (fallback)
     header_indices = {
-        "date_start": 0,
         "cheque_start": 50, 
         "with_start": 70,
         "dep_start": 90,
@@ -28,9 +27,6 @@ def parse_rpt_file(file_path):
             header_found = True
             
             # Dynamic positions
-            p_date = line_upper.find("DATE")
-            if p_date == -1: p_date = 0
-            
             p_chq = line_upper.find("CHQ.NO") 
             if p_chq == -1: p_chq = line_upper.find("REF.NO")
             if p_chq == -1: p_chq = 45 # Fallback
@@ -45,7 +41,6 @@ def parse_rpt_file(file_path):
             if p_bal == -1: p_bal = 105
             
             header_indices = {
-                "date_start": p_date,
                 "cheque_start": p_chq,
                 "with_start": p_with,
                 "dep_start": p_dep,
@@ -68,7 +63,6 @@ def parse_rpt_file(file_path):
         
         # 1. Extract Date
         # Use a wider window to find the date, handling potential margins
-        # We look at the first 25 chars.
         date_window = line[:25]
         date_match = date_pattern.search(date_window)
         
@@ -76,10 +70,6 @@ def parse_rpt_file(file_path):
         date_val = date_match.group(0) if is_new_row else ""
         
         # 2. Extract columns
-        # We use the header indices, but we need to be careful about the Date/Particulars split.
-        # Particulars usually starts after Date.
-        
-        idx_date = header_indices["date_start"]
         idx_chq = header_indices["cheque_start"]
         idx_with = header_indices["with_start"]
         idx_dep = header_indices["dep_start"]
@@ -89,10 +79,30 @@ def parse_rpt_file(file_path):
             if start >= len(s): return ""
             return s[start:end].strip()
 
-        # Particulars starts after date (approx 10-12 chars after date start)
-        # Or we can use the header index of "PARTICULARS" if we had it.
-        # Let's assume it starts 12 chars after date_start to be safe.
-        part_start = idx_date + 11 
+        # CRITICAL FIX: Determine where Particulars starts
+        # Instead of relying on header "DATE" position (which might be centered),
+        # we start immediately after the date ends in the current line.
+        
+        if is_new_row:
+            # Start 1 char after the date ends to skip the immediate separator
+            part_start = date_match.end()
+        else:
+            # For continuation lines, we assume the text starts roughly where the date column ends.
+            # Standard date is 10 chars. Let's start at 10.
+            # .strip() will handle any extra leading spaces.
+            part_start = 10
+            
+            # Safety check: if the line has text before index 10 (e.g. very long margin shift),
+            # we might miss it. But usually continuation lines are indented.
+            # If the line is "      PARTICULARS...", index 10 is fine.
+            # If the line is "PARTICULARS...", index 10 cuts it.
+            # But continuation lines usually don't start at index 0.
+            # Let's be safe and check if the line starts earlier.
+            if len(line.strip()) > 0:
+                # Find where the first non-space char is
+                first_char_idx = len(line) - len(line.lstrip())
+                if first_char_idx < 10:
+                    part_start = first_char_idx
         
         part_val = get_slice(line, part_start, idx_chq)
         chq_val = get_slice(line, idx_chq, idx_with)
