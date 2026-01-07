@@ -31,9 +31,9 @@ const FileUpload = ({ onUpload, disabled }) => {
 
     return (
         <div
-            className={`w-full h-full min-h-[300px] flex flex-col items-center justify-center text-center transition-all border-2 border-dashed rounded-2xl p-8
-            ${dragActive ? 'border-blue-500 bg-blue-50' : 'border-slate-200 bg-slate-50/50'} 
-            ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:border-blue-400 hover:bg-white'}`}
+            className={`w-full h-full min-h-[300px] flex flex-col items-center justify-center text-center transition-all border-2 border-dashed rounded-lg p-8
+            ${dragActive ? 'border-red-500 bg-zinc-800/80' : 'border-zinc-700 bg-zinc-900/50'} 
+            ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:border-red-500 hover:bg-zinc-800'}`}
             onDragEnter={handleDrag}
             onDragLeave={handleDrag}
             onDragOver={handleDrag}
@@ -48,16 +48,16 @@ const FileUpload = ({ onUpload, disabled }) => {
                 disabled={disabled}
             />
             <label htmlFor="file-upload" className="cursor-pointer w-full h-full flex flex-col items-center justify-center">
-                <div className="bg-white p-4 rounded-full shadow-md mb-6">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <div className="bg-zinc-800 p-4 rounded-full shadow-lg mb-6 border border-zinc-700">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
                     </svg>
                 </div>
-                <p className="text-xl font-bold text-slate-800 mb-2">Upload Bank Statement</p>
-                <p className="text-slate-500 text-sm mb-6 max-w-xs mx-auto">
+                <p className="text-xl font-bold text-white mb-2">Upload Bank Statement</p>
+                <p className="text-zinc-400 text-sm mb-6 max-w-xs mx-auto">
                     Drag & Drop PDF, RPT, or Image files here to start conversion
                 </p>
-                <span className="px-6 py-2 bg-white border border-slate-300 rounded-full text-slate-700 font-medium shadow-sm hover:shadow-md transition-all">
+                <span className="px-6 py-2 bg-zinc-800 border border-zinc-600 rounded-sm text-white font-medium shadow-sm hover:bg-zinc-700 transition-all">
                     Browse Files
                 </span>
             </label>

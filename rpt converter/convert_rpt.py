@@ -2,7 +2,7 @@ import pandas as pd
 import re
 import os
 
-def parse_rpt_file(file_path):
+def parse_rpt(file_path):
     transactions = []
     current_tx = None
     
@@ -108,8 +108,20 @@ def parse_rpt_file(file_path):
     if current_tx:
         transactions.append(current_tx)
 
-    # Convert to DataFrame to match expected output of parse_rpt_file
-    df = pd.DataFrame(transactions)
+    return transactions
+
+def parse_amount(amount_str):
+    if not amount_str:
+        return 0.0
+    try:
+        # Remove commas if any (though typical RPT usually doesn't have them, python float handles plain nums)
+        return float(amount_str.replace(',', ''))
+    except ValueError:
+        return 0.0
+
+def convert_to_excel(input_path, output_path):
+    data = parse_rpt(input_path)
+    df = pd.DataFrame(data)
     
     # Reorder/Ensure columns
     columns = ['Date', 'Particulars', 'Chq/Ref No.', 'Withdrawals', 'Deposits', 'Balance']
@@ -121,13 +133,10 @@ def parse_rpt_file(file_path):
         df['Particulars'] = df['Particulars'].apply(lambda x: re.sub(r'\s+', ' ', x).strip())
         df['Chq/Ref No.'] = df['Chq/Ref No.'].apply(lambda x: re.sub(r'\s+', ' ', x).strip())
 
-    return df
+    df.to_excel(output_path, index=False)
+    print(f"Successfully converted {input_path} to {output_path}")
 
-def parse_amount(amount_str):
-    if not amount_str:
-        return 0.0
-    try:
-        # Remove commas if any (though typical RPT usually doesn't have them, python float handles plain nums)
-        return float(amount_str.replace(',', ''))
-    except ValueError:
-        return 0.0
+if __name__ == "__main__":
+    input_file = r"c:\Users\gurpr\.gemini\antigravity\AI PROJECTS\rpt converter\TMPDAAmL1n_dT12.RPT"
+    output_file = r"c:\Users\gurpr\.gemini\antigravity\AI PROJECTS\rpt converter\output_v2.xlsx"
+    convert_to_excel(input_file, output_file)

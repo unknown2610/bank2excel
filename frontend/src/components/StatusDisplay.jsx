@@ -7,27 +7,27 @@ const StatusDisplay = ({ status, progress, message, onDownload, onReset }) => {
 
     return (
         <div className="w-full text-center">
-            <h2 className="text-2xl font-bold mb-6 text-slate-800">
+            <h2 className="text-2xl font-bold mb-6 text-white">
                 {isProcessing && 'Converting...'}
                 {isCompleted && 'Success!'}
                 {isFailed && 'Failed'}
             </h2>
 
             {/* Progress Bar */}
-            <div className="w-full bg-slate-200 rounded-full h-3 mb-4 overflow-hidden">
+            <div className="w-full bg-zinc-700 rounded-full h-2 mb-4 overflow-hidden">
                 <div
-                    className={`h-3 rounded-full transition-all duration-500 ${isFailed ? 'bg-red-500' : 'bg-blue-600'
+                    className={`h-2 rounded-full transition-all duration-500 ${isFailed ? 'bg-red-500' : 'bg-red-600'
                         }`}
                     style={{ width: `${progress}%` }}
                 ></div>
             </div>
 
-            <div className="flex justify-between text-xs text-slate-500 mb-8 font-medium">
+            <div className="flex justify-between text-xs text-zinc-400 mb-8 font-medium">
                 <span>{progress}%</span>
                 <span>{isProcessing ? 'Processing...' : isCompleted ? 'Done' : 'Error'}</span>
             </div>
 
-            <p className="text-slate-600 mb-8 min-h-[1.5rem] font-medium">{message}</p>
+            <p className="text-zinc-300 mb-8 min-h-[1.5rem] font-medium">{message}</p>
 
             {isCompleted && (
                 <button
@@ -42,7 +42,7 @@ const StatusDisplay = ({ status, progress, message, onDownload, onReset }) => {
             )}
 
             {isFailed && (
-                <div className="text-red-500 text-sm mb-6 bg-red-50 p-3 rounded-lg border border-red-100">
+                <div className="text-red-400 text-sm mb-6 bg-red-900/20 p-3 rounded-lg border border-red-900/50">
                     Conversion failed. Please try again.
                 </div>
             )}
@@ -50,7 +50,7 @@ const StatusDisplay = ({ status, progress, message, onDownload, onReset }) => {
             {!isProcessing && (
                 <button
                     onClick={onReset}
-                    className="text-slate-500 hover:text-slate-800 underline text-sm font-medium transition-colors"
+                    className="text-zinc-500 hover:text-white underline text-sm font-medium transition-colors"
                 >
                     Convert Another File
                 </button>

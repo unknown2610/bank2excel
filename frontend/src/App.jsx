@@ -1,14 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import FileUpload from './components/FileUpload';
 import StatusDisplay from './components/StatusDisplay';
+import rptPreview from './assets/rpt_preview.png';
+import jkPreview from './assets/jk_preview.png';
 
-const API_URL = 'https://bank2excel-backend-361068788298.us-central1.run.app';
+const API_URL = 'https://bank2excel-api-631251922410.us-central1.run.app'; // Default to localhost for now as requested
 
 function App() {
   const [jobId, setJobId] = useState(null);
   const [status, setStatus] = useState('idle'); // idle, processing, completed, failed
   const [progress, setProgress] = useState(0);
   const [message, setMessage] = useState('');
+  const [conversionType, setConversionType] = useState(null); // null, 'jk_bank', 'rpt', 'generic'
 
   useEffect(() => {
     let interval;
@@ -35,6 +38,7 @@ function App() {
   const handleUpload = async (file) => {
     const formData = new FormData();
     formData.append('file', file);
+    formData.append('conversion_type', conversionType || 'generic');
 
     try {
       setStatus('processing');
@@ -64,111 +68,173 @@ function App() {
     }
   };
 
+  const resetSelection = () => {
+    setConversionType(null);
+    setStatus('idle');
+    setJobId(null);
+    setProgress(0);
+    setMessage('');
+  };
+
   return (
-    <div className="min-h-screen flex flex-col font-sans text-slate-900">
+    <div className="min-h-screen flex flex-col font-sans selection:bg-indigo-500 selection:text-white">
       {/* Navigation */}
-      <nav className="w-full px-6 py-4 flex justify-between items-center max-w-7xl mx-auto">
-        <div className="flex items-center gap-2">
-          <div className="bg-blue-600 text-white p-1.5 rounded-lg">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 14v3m4-3v3m4-3v3M3 21h18M3 10h18M3 7l9-4 9 4M4 10h16v11H4V10z" />
-            </svg>
-          </div>
-          <span className="text-xl font-bold text-slate-800">Bank 2 Excel</span>
+      <nav className="w-full px-8 py-8 flex justify-between items-center z-50 animate-fade-in">
+        <div className="flex items-center gap-2 cursor-pointer group" onClick={resetSelection}>
+          <span className="text-3xl font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-white to-gray-400 group-hover:from-indigo-400 group-hover:to-purple-400 transition-all duration-300">
+            BANK2EXCEL
+          </span>
         </div>
-
-        <div className="hidden md:flex gap-8">
-          <a href="#" className="nav-link">Features</a>
-          <a href="#" className="nav-link">Pricing</a>
-          <a href="#" className="nav-link">Security</a>
-        </div>
-
-        <div>
-          <button className="btn-outline px-6 py-2 rounded-full text-sm font-semibold">Sign In</button>
+        <div className="flex gap-6">
+          {conversionType && (
+            <button onClick={resetSelection} className="flex items-center gap-2 text-sm font-bold text-slate-400 hover:text-white transition-colors uppercase tracking-widest bg-white/5 hover:bg-white/10 px-4 py-2 rounded-full backdrop-blur-sm border border-white/5">
+              <span className="text-lg">←</span> Home
+            </button>
+          )}
         </div>
       </nav>
 
-      {/* Hero Section */}
-      <main className="flex-grow flex flex-col items-center justify-center px-4 mt-10 mb-20">
-        <div className="max-w-7xl w-full grid md:grid-cols-2 gap-12 items-center">
+      {/* Main Content */}
+      <main className="flex-grow flex flex-col items-center justify-center px-4 relative z-10">
 
-          {/* Left Content */}
-          <div className="text-left space-y-6">
-            <h1 className="text-5xl md:text-6xl font-bold leading-tight text-slate-900">
-              Effortlessly Convert Bank Statements to Excel
-            </h1>
-            <p className="text-lg text-slate-600 max-w-lg leading-relaxed">
-              Accurate, secure, and fast PDF to spreadsheet conversion for accountants and businesses.
-            </p>
-            <div className="pt-4">
-              <button
-                onClick={() => document.getElementById('upload-card').scrollIntoView({ behavior: 'smooth' })}
-                className="btn-primary text-lg shadow-emerald-200"
+        {!conversionType ? (
+          /* Selection Screen */
+          <div className="max-w-7xl w-full flex flex-col items-center">
+            <div className="text-center mb-16 space-y-4 animate-fade-in">
+              <h1 className="text-6xl md:text-7xl font-extrabold tracking-tight">
+                <span className="bg-clip-text text-transparent bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400 animate-pulse-glow">
+                  Convert faster.
+                </span><br />
+                <span className="text-white">Work smarter.</span>
+              </h1>
+              <p className="text-slate-400 text-xl max-w-2xl mx-auto font-light">
+                Select your document type to launch our specialized AI conversion logic.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 w-full px-4 md:px-0">
+
+              {/* JK Bank Option */}
+              <div
+                onClick={() => setConversionType('jk_bank')}
+                className="group relative h-[360px] glass-card overflow-hidden cursor-pointer card-hover animate-fade-in"
+                style={{ animationDelay: '0.1s' }}
               >
-                Try for Free
-              </button>
-            </div>
+                <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/20 to-purple-500/20 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
 
-            {/* Features Icons */}
-            <div className="grid grid-cols-3 gap-6 pt-12">
-              <div>
-                <div className="feature-icon">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-                  </svg>
+                <div className="h-2/3 w-full relative overflow-hidden">
+                  <img
+                    src={jkPreview}
+                    alt="JK Bank Preview"
+                    className="w-full h-full object-cover opacity-60 group-hover:opacity-100 group-hover:scale-110 transition-all duration-700 ease-out"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-transparent to-transparent" />
                 </div>
-                <h3 className="font-semibold text-sm mb-1">High Accuracy AI</h3>
-                <p className="text-xs text-slate-500">Convert vast PDF statements with high accuracy.</p>
+
+                <div className="p-8 absolute bottom-0 w-full z-10">
+                  <div className="w-12 h-1 bg-gradient-to-r from-indigo-500 to-purple-500 mb-4 rounded-full" />
+                  <h3 className="text-2xl font-bold mb-2 text-white group-hover:text-indigo-400 transition-colors">JK Bank Statement</h3>
+                  <p className="text-slate-400 text-sm leading-relaxed group-hover:text-slate-300">
+                    Specialized parsing for J&K Bank PDF layouts. Autosorts withdrawals & deposits.
+                  </p>
+                </div>
               </div>
-              <div>
-                <div className="feature-icon">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-                  </svg>
+
+              {/* RPT Option */}
+              <div
+                onClick={() => setConversionType('rpt')}
+                className="group relative h-[360px] glass-card overflow-hidden cursor-pointer card-hover animate-fade-in"
+                style={{ animationDelay: '0.2s' }}
+              >
+                <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/20 to-teal-500/20 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+
+                <div className="h-2/3 w-full relative overflow-hidden">
+                  <img
+                    src={rptPreview}
+                    alt="RPT Preview"
+                    className="w-full h-full object-cover opacity-60 group-hover:opacity-100 group-hover:scale-110 transition-all duration-700 ease-out"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-transparent to-transparent" />
                 </div>
-                <h3 className="font-semibold text-sm mb-1">Bank-Grade Security</h3>
-                <p className="text-xs text-slate-500">Provides secure encryption and data protection.</p>
+
+                <div className="p-8 absolute bottom-0 w-full z-10">
+                  <div className="w-12 h-1 bg-gradient-to-r from-emerald-500 to-teal-500 mb-4 rounded-full" />
+                  <h3 className="text-2xl font-bold mb-2 text-white group-hover:text-emerald-400 transition-colors">RPT to Excel</h3>
+                  <p className="text-slate-400 text-sm leading-relaxed group-hover:text-slate-300">
+                    Handle complex fixed-width RPT files. Perfect for legacy banking systems.
+                  </p>
+                </div>
               </div>
-              <div>
-                <div className="feature-icon">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+
+              {/* Generic Option */}
+              <div
+                onClick={() => setConversionType('generic')}
+                className="group relative h-[360px] glass-card overflow-hidden cursor-pointer card-hover animate-fade-in"
+                style={{ animationDelay: '0.3s' }}
+              >
+                <div className="absolute inset-0 bg-gradient-to-br from-pink-500/20 to-orange-500/20 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+
+                <div className="h-2/3 w-full relative overflow-hidden bg-slate-800/50 flex items-center justify-center">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-24 w-24 text-slate-600 group-hover:text-pink-500 transition-colors duration-500 group-hover:scale-110 transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
                   </svg>
+                  <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-transparent to-transparent" />
                 </div>
-                <h3 className="font-semibold text-sm mb-1">Instant Processing</h3>
-                <p className="text-xs text-slate-500">Easy-to-use sessions for instant processing.</p>
+
+                <div className="p-8 absolute bottom-0 w-full z-10">
+                  <div className="w-12 h-1 bg-gradient-to-r from-pink-500 to-orange-500 mb-4 rounded-full" />
+                  <h3 className="text-2xl font-bold mb-2 text-white group-hover:text-pink-400 transition-colors">Smart Auto-Detect</h3>
+                  <p className="text-slate-400 text-sm leading-relaxed group-hover:text-slate-300">
+                    General purpose PDF and Image conversion. Best for simple tables.
+                  </p>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        ) : (
+          /* Upload Interface */
+          <div className="max-w-4xl w-full flex flex-col items-center animate-fade-in">
+            <h2 className="text-4xl font-bold mb-12 text-transparent bg-clip-text bg-gradient-to-r from-white to-slate-500">
+              <span className="text-indigo-500 mr-4">Converting:</span>
+              {conversionType === 'jk_bank' && "JK Bank Statement"}
+              {conversionType === 'rpt' && "RPT File"}
+              {conversionType === 'generic' && "General Document"}
+            </h2>
+
+            <div className="w-full relative group">
+              <div className="absolute -inset-1 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 rounded-2xl blur opacity-25 group-hover:opacity-75 transition duration-1000 group-hover:duration-200"></div>
+
+              <div className="glass-card p-1 relative bg-slate-900 ring-1 ring-white/10 rounded-2xl">
+                <div className="bg-slate-950/50 rounded-xl p-8 min-h-[400px] flex flex-col justify-center">
+                  {status === 'idle' ? (
+                    <FileUpload onUpload={handleUpload} disabled={false} />
+                  ) : (
+                    <StatusDisplay
+                      status={status}
+                      progress={progress}
+                      message={message}
+                      onDownload={handleDownload}
+                      onReset={() => {
+                        setStatus('idle');
+                        setJobId(null);
+                        setProgress(0);
+                        setMessage('');
+                      }}
+                    />
+                  )}
+                </div>
               </div>
             </div>
           </div>
+        )}
 
-          {/* Right Content - The Functional Card */}
-          <div id="upload-card" className="relative">
-            {/* Decorative Elements behind card */}
-            <div className="absolute -top-10 -right-10 w-64 h-64 bg-blue-200 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-blob"></div>
-            <div className="absolute -bottom-10 -left-10 w-64 h-64 bg-emerald-200 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-blob animation-delay-2000"></div>
-
-            <div className="glass-card p-8 relative z-10 min-h-[400px] flex flex-col justify-center">
-              {status === 'idle' ? (
-                <FileUpload onUpload={handleUpload} disabled={false} />
-              ) : (
-                <StatusDisplay
-                  status={status}
-                  progress={progress}
-                  message={message}
-                  onDownload={handleDownload}
-                  onReset={() => {
-                    setStatus('idle');
-                    setJobId(null);
-                    setProgress(0);
-                    setMessage('');
-                  }}
-                />
-              )}
-            </div>
-          </div>
-
-        </div>
       </main>
+
+      {/* Footer */}
+      <footer className="w-full py-8 text-center text-slate-500 text-sm font-medium">
+        Bank2Excel © 2026. <span className="text-slate-600">AI'ed by Gurpreet (NRO0549648)</span>
+      </footer>
     </div>
   );
 }
