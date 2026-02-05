@@ -6,120 +6,143 @@ def parse_rpt_file(file_path):
     transactions = []
     current_tx = None
     
-    # Column Indices (Refined)
-    # Date: 2-12
-    # Particulars: 14-33
-    # Chq No: 33-51
-    # Withdrawals: 51-64 (Previously 51-67)
-    # Deposits: 64-79 (Previously 67-81)
-    # Balance: 79-end (Previously 81-end)
+    # Default Indices (Fallback)
+    col_indices = {
+        'Date': (0, 11),
+        'Particulars': (11, 45),
+        'Chq/Ref No.': (45, 65),
+        'Withdrawals': (65, 85),
+        'Deposits': (85, 105),
+        'Balance': (105, None)
+    }
 
-    
-    with open(file_path, 'r') as f:
+    with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
         lines = f.readlines()
 
-    # Skip header (Line 0)
-    # Check for Opening Balance in Line 1?
-    # We will process line by line.
-    
+    # Column markers to help dynamic detection
+    markers = {
+        'DATE': 'Date',
+        'PARTICULARS': 'Particulars',
+        'CHQ.NO': 'Chq/Ref No.',
+        'WITHDRAWALS': 'Withdrawals',
+        'DEPOSITS': 'Deposits',
+        'BALANCE': 'Balance'
+    }
+
     date_pattern = re.compile(r'\d{2}-\d{2}-\d{4}')
 
+    # Better Dynamic Detection
+    for line in lines[:20]:
+        if sum(1 for m in markers if m in line) >= 3:
+            all_found_markers = {m: line.find(m) for m in markers if line.find(m) != -1}
+            sorted_markers = sorted([(pos, m) for m, pos in all_found_markers.items()])
+            
+            new_indices = {}
+            for i in range(len(sorted_markers)):
+                start_pos, marker = sorted_markers[i]
+                col_name = markers[marker]
+                
+                # col_start
+                if i == 0:
+                    col_start = 0
+                else:
+                    prev_end = sorted_markers[i-1][0] + len(sorted_markers[i-1][1])
+                    col_start = (prev_end + start_pos) // 2
+                    
+                # col_end
+                if i == len(sorted_markers) - 1:
+                    col_end = None
+                else:
+                    this_end = start_pos + len(marker)
+                    next_start = sorted_markers[i+1][0]
+                    col_end = (this_end + next_start) // 2
+                
+                new_indices[col_name] = (col_start, col_end)
+            
+            # Refine Date/Particulars boundary if Date detected at start
+            if 'Date' in new_indices and new_indices['Date'][0] == 0:
+                # Look for a date in the next few lines to see its actual end
+                for next_line in lines[lines.index(line)+1 : lines.index(line)+10]:
+                    match = date_pattern.search(next_line)
+                    if match:
+                        date_end = match.end()
+                        # Date column should end slightly after the date match
+                        new_indices['Date'] = (0, date_end + 1)
+                        if 'Particulars' in new_indices:
+                             ps, pe = new_indices['Particulars']
+                             new_indices['Particulars'] = (date_end + 1, pe)
+                        break
+            
+            col_indices.update(new_indices)
+            break
+
     for line in lines:
-        # Skip empty lines or separator lines if any (though file looks clean)
         if not line.strip():
             continue
             
-        # Extract fields
-        date_str = line[2:12].strip()
-        particulars = line[14:33].strip()
-        chq_no = line[33:51].strip()
-        withdrawal_str = line[51:64].strip()
-        deposit_str = line[64:79].strip()
-        balance_str = line[79:].strip()
+        def get_field(col_name):
+            if col_name not in col_indices:
+                 return ""
+            start, end = col_indices[col_name]
+            val = line[start:end].strip() if end else line[start:].strip()
+            return val
 
-        # Check if header
-        if "DATE" in line and "PARTICULARS" in line:
+        date_str = get_field('Date')
+        particulars = get_field('Particulars')
+        chq_no = get_field('Chq/Ref No.')
+        withdrawal_str = get_field('Withdrawals')
+        deposit_str = get_field('Deposits')
+        balance_str = get_field('Balance')
+
+        if sum(1 for m in markers if m in line) >= 3:
             continue
 
-        # Check if new transaction (Date present)
         if date_pattern.match(date_str):
-            # Save previous transaction if exists
             if current_tx:
                 transactions.append(current_tx)
             
-            # Start new transaction
             current_tx = {
                 'Date': date_str,
                 'Particulars': particulars,
                 'Chq/Ref No.': chq_no,
                 'Withdrawals': parse_amount(withdrawal_str),
                 'Deposits': parse_amount(deposit_str),
-                'Balance': balance_str  # Keep string for now to preserve Dr/Cr
+                'Balance': parse_amount(balance_str)
             }
         else:
-            # No date. Could be:
-            # 1. Opening balance line (at start)
-            # 2. Continuation of particulars for previous transaction
-            # 3. Attributes for previous transaction (Chq number, amounts) appearing on 2nd line
-            
-            if current_tx is None:
-                # Handle Opening Balance Case?
-                # If we see a balance but no date/particulars, maybe capture it?
-                # For now let's just ignore if it's strictly just correct data.
-                if balance_str and not particulars and not withdrawal_str and not deposit_str:
-                     # Treat as initial opening balance if we want, or just skip. 
-                     # Let's create a dummy entry for Opening Balance if needed.
-                     pass
-            else:
-                # Append/Update data to current_tx
+            if current_tx:
                 if particulars:
                     current_tx['Particulars'] += " " + particulars
                 if chq_no:
-                    # If chq_no wasn't there, add it. If it was, maybe append? Usually it replaces or is unique.
                     if not current_tx['Chq/Ref No.']:
                         current_tx['Chq/Ref No.'] = chq_no
                     else:
                         current_tx['Chq/Ref No.'] += " " + chq_no
                         
                 if withdrawal_str:
-                    # If amount was missing on first line, take it now. 
-                    # If amount was present, this might be a split? But usually amount is on one line.
                     amount = parse_amount(withdrawal_str)
-                    if current_tx['Withdrawals'] == 0.0:
-                        current_tx['Withdrawals'] = amount
-                    else:
-                        # Only add if it's non-zero
-                         if amount != 0.0:
-                            current_tx['Withdrawals'] += amount
+                    if amount != 0.0:
+                        current_tx['Withdrawals'] += amount
 
                 if deposit_str:
                     amount = parse_amount(deposit_str)
-                    if current_tx['Deposits'] == 0.0:
-                        current_tx['Deposits'] = amount
-                    else:
-                         if amount != 0.0:
-                            current_tx['Deposits'] += amount
+                    if amount != 0.0:
+                        current_tx['Deposits'] += amount
                             
                 if balance_str:
-                    # Update balance to the latest line's balance (usually the bottom line has the final balance for that tx)
-                    current_tx['Balance'] = balance_str
+                    # Update balance (usually the last line of a txn has the correct running balance)
+                    current_tx['Balance'] = parse_amount(balance_str)
 
-    # Append last transaction
     if current_tx:
         transactions.append(current_tx)
 
-    # Convert to DataFrame to match expected output of parse_rpt_file
     df = pd.DataFrame(transactions)
-    
-    # Reorder/Ensure columns
     columns = ['Date', 'Particulars', 'Chq/Ref No.', 'Withdrawals', 'Deposits', 'Balance']
-    # Filter only columns that exist (in case no data found)
     df = df[columns] if not df.empty else pd.DataFrame(columns=columns)
     
-    # Clean Particulars (remove double spaces)
     if not df.empty:
-        df['Particulars'] = df['Particulars'].apply(lambda x: re.sub(r'\s+', ' ', x).strip())
-        df['Chq/Ref No.'] = df['Chq/Ref No.'].apply(lambda x: re.sub(r'\s+', ' ', x).strip())
+        df['Particulars'] = df['Particulars'].apply(lambda x: re.sub(r'\s+', ' ', str(x)).strip() if x else "")
+        df['Chq/Ref No.'] = df['Chq/Ref No.'].apply(lambda x: re.sub(r'\s+', ' ', str(x)).strip() if x else "")
 
     return df
 
@@ -127,7 +150,19 @@ def parse_amount(amount_str):
     if not amount_str:
         return 0.0
     try:
-        # Remove commas if any (though typical RPT usually doesn't have them, python float handles plain nums)
-        return float(amount_str.replace(',', ''))
+        # Robust parsing: remove everything except digits, dots and minus
+        # Handle Dr/Cr by checking for 'Dr' or 'Cr'
+        is_dr = 'Dr' in str(amount_str)
+        is_cr = 'Cr' in str(amount_str)
+        
+        clean_val = re.sub(r'[^\d.-]', '', str(amount_str))
+        if not clean_val or clean_val == "." or clean_val == "-":
+            return 0.0
+        
+        val = float(clean_val)
+        # Note: In bank statements, Dr usually means negative balance (overdraft) or withdrawal.
+        # But we'll just keep it positive and let the user decide. 
+        # Actually, let's keep it as is for now.
+        return val
     except ValueError:
         return 0.0

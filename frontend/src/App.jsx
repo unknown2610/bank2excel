@@ -11,7 +11,7 @@ function App() {
   const [status, setStatus] = useState('idle'); // idle, processing, completed, failed
   const [progress, setProgress] = useState(0);
   const [message, setMessage] = useState('');
-  const [conversionType, setConversionType] = useState(null); // null, 'jk_bank', 'rpt', 'generic'
+  const [conversionType, setConversionType] = useState(null); // null, 'jk_bank', 'rpt', 'rpt_pdf', 'generic'
 
   useEffect(() => {
     let interval;
@@ -112,7 +112,7 @@ function App() {
               </p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 w-full px-4 md:px-0">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 w-full px-4 md:px-0">
 
               {/* JK Bank Option */}
               <div
@@ -166,6 +166,32 @@ function App() {
                 </div>
               </div>
 
+              {/* RPT in PDF Option */}
+              <div
+                onClick={() => setConversionType('rpt_pdf')}
+                className="group relative h-[360px] glass-card overflow-hidden cursor-pointer card-hover animate-fade-in"
+                style={{ animationDelay: '0.25s' }}
+              >
+                <div className="absolute inset-0 bg-gradient-to-br from-blue-500/20 to-indigo-500/20 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+
+                <div className="h-2/3 w-full relative overflow-hidden">
+                  <img
+                    src={rptPreview}
+                    alt="RPT in PDF Preview"
+                    className="w-full h-full object-cover opacity-60 group-hover:opacity-100 group-hover:scale-110 transition-all duration-700 ease-out"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-transparent to-transparent" />
+                </div>
+
+                <div className="p-8 absolute bottom-0 w-full z-10">
+                  <div className="w-12 h-1 bg-gradient-to-r from-blue-500 to-indigo-500 mb-4 rounded-full" />
+                  <h3 className="text-2xl font-bold mb-2 text-white group-hover:text-blue-400 transition-colors">RPT in PDF</h3>
+                  <p className="text-slate-400 text-sm leading-relaxed group-hover:text-slate-300">
+                    Extract data from PDF versions of RPT files. Specialized logic for legacy PDF formats.
+                  </p>
+                </div>
+              </div>
+
               {/* Generic Option */}
               <div
                 onClick={() => setConversionType('generic')}
@@ -199,6 +225,7 @@ function App() {
               <span className="text-indigo-500 mr-4">Converting:</span>
               {conversionType === 'jk_bank' && "JK Bank Statement"}
               {conversionType === 'rpt' && "RPT File"}
+              {conversionType === 'rpt_pdf' && "RPT in PDF"}
               {conversionType === 'generic' && "General Document"}
             </h2>
 
